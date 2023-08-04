@@ -652,17 +652,106 @@ public class UserServiceProxy implements MethodInterceptor {
 
 - 如果我们的切面比较少，那么两者性能差异不大。但是，当切面太多的话，最好选择 AspectJ ，它比 Spring AOP 快很多。
 
-# 
 
-# 
 
-# 
+# 4.注解
 
-# 
+### 1.ConfigurationProperties 和 Value
 
-# 什么是IOC
+| Feature           | `@ConfigurationProperties` | `@Value` |
+| :---------------- | :------------------------- | :------- |
+| Relaxed binding   | Yes                        | Limited  |
+| Meta-data support | Yes                        | No       |
+| `SpEL` evaluation | No                         | Yes      |
 
-`Inversion of Control`将对象的创建和管理通过注解交给容器来完成，使得程序员只需要关心业务逻辑的实现而不是对象之间的依赖关系。
+- Relaxed binding：外部属性与Java对象之间的灵活绑定机制
+
+  - my.main-project.person.first-name【Kebab case, which is recommended for use in `.properties` and YAML files.】
+
+  - 大小写忽略
+
+  - 下划线_与破折号-互相转换等
+
+- Meta-data support：
+  - 支持属性的
+    - 类型转换
+    - 默认值
+    - 校验
+  - 支持分组和继承
+
+```java
+@ConfigurationProperties(prefix = "myapp")
+public class MyAppProperties {
+    // Common properties
+    private String commonProperty;
+
+    // Database module properties
+    private String databaseUrl;
+    private String databaseUsername;
+    private String databasePassword;
+
+    // Cache module properties
+    private boolean cacheEnabled;
+    private int cacheMaxEntries;
+
+    // getters and setters
+}
+
+@ConfigurationProperties(prefix = "myapp.database")
+public class DatabaseProperties extends MyAppProperties {
+    // Additional properties specific to the database module
+    // ...
+}
+
+@ConfigurationProperties(prefix = "myapp.cache")
+public class CacheProperties extends MyAppProperties {
+    // Additional properties specific to the cache module
+    // ...
+}
+```
+
+- SpEL（Spring Expression language)
+  - 支持动态计算和操作对象的属性、方法调用、算术运算、逻辑判断等。
+
+
+
+
+
+# 依赖注入
+
+Field Injection存在的问题
+
+- 潜在的空指针风险
+
+  - ```java
+    @Service
+    public class EmailService {
+    
+        @Autowired
+        private EmailValidator emailValidator;
+    }
+    
+    public void process(String email) {
+        if(!emailValidator.isValid(email)){
+            throw new IllegalArgumentException(INVALID_EMAIL);
+        }
+        // ...
+    }
+    
+    EmailService emailService = new EmailService();
+    emailService.process("test@baeldung.com");
+    ```
+
+- 不可变性
+
+  - 字段注入无法创建不可变类
+  - 不可变类的优势：线程安全、易于缓存、易于测试和调试
+
+- 单一职责原则
+
+  - 使用字段注入后，当前类还需要管理字段注入的依赖关系，不易于理解和维护
+
+- 单元测试
 
 
 
@@ -715,93 +804,3 @@ public @interface EnableAutoConfiguration {
 
 
 
-# @Autowired和@Resouce区别
-
-都是Spring中实现Bean注入的注解
-
-- @Autowired 根据==类型==匹配
-
-```java
-@Service
-public class UserService{
-  // 默认true,强制要求实现注入
-  // 不希望注入，false 
-  @Autowired(required = true)
-  private HelloService helloService;
-  
-  @Autowired
-  @Qualifier()
-}
-```
-
-- @Resouce 根据==bean的名字==注入
-
-```java
-@Service
-public class UserService{
-			// 根据bean的名字注入
-  		@Resource(name = "userService01")
-  		private UserService01 userService;
-  		
-  		// 根据类型注入
-  		@Resource(type = UserService02.class)
-      private UserService02 userService;
-  }
-}
-```
-
-
-
-# @Component和@Confuguration区别
-
-- @Component 用于标识`普通的 Spring 组件类`,该类需要被Spring管理和实例化。
-- @Configuration 用于标识`配置类`，即定义 Bean 的工厂类。该类可以包含一个或多个@Bean方法，这些方法将返回一个被Spring管理的对象实例
-
-```java
-@Component
-public class MyComponent implements InitializingBean {
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        // 初始化代码
-    }
-}
-```
-
-```java
-@Configuration
-public class MyConfiguration {
-    @Bean
-    public MyBean myBean() {
-        // 初始化代码
-        return new MyBean();
-    }
-}
-```
-
-
-
-# @Component和@Bean区别
-
-- `@Component`注解作用于类，`@Bean`作用于方法
-- @Component通常通过类路径扫描来自动侦测以及自动装配到Spring容器中(`@ComponentScan`注解定义要扫描的路径从中找出标了需要装配的类自动装配到Spring的bean容器中)。@Bean注解通常是我们在标有该注解的方法中定义产生这个bean，`@Bean`告诉了Spring这是某个类的实例。
-- `@Bean`注解比`@Component`注解的自定义性更强
-
-```java
-@Configuration
-public class AppConfig {
-    @Bean
-    public TransferService transferService() {
-        return new TransferServiceImpl();
-    }
-}
-```
-
-# 拦截器和过滤器的区别
-
-|          | 过滤器filter                                                 | 拦截器interceptor                          |
-| :------: | :----------------------------------------------------------- | :----------------------------------------- |
-| 生命周期 | 在Servlet容器中执行                                          | 在Spring容器中执行                         |
-| 作用对象 | 针对请求URL或者请求的servlet进行拦截处理，解析post、resutful风格的表单数据等 | 针对方法进行拦截处理，权限校验、登录校验等 |
-| 作用范围 | 可以拦截静态资源(图片、css文件)                              | 拦截请求到Controller层的请求               |
-| 拦截时机 | 请求进入Servlet容器之前和Servlet容器之后                     | 请求进入Spring MVC控制器之前和进入视图之前 |
-|          |                                                              |                                            |

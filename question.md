@@ -656,6 +656,105 @@ Proxy的底层实现，在程序运行期间动态生成一个代理类$Proxy并
 
 # Springboot
 
+
+
+## 核心功能
+
+- 可以独立运行Spring项目
+  - 可以以 jar 包形式独立运行
+- 内嵌 Servlet 容器
+  - 执行DemoApplication快速运行
+- 提供 `starter` 简化 `Maven` 依赖
+  - 提供pom文件简化依赖
+- 自动配置 Spring
+- 无XML配置
+
+
+
+## 构造函数推断
+
+在存在多个构造器的情况下，默认会选择无参构造器。
+
+如果没有无参构造器，需通过@Autowired指定，否则spring因不知道使用哪个而报错
+
+
+
+## 什么是IOC
+
+`Inversion of Control`将对象的创建和管理通过注解交给容器来完成，使得程序员只需要关心业务逻辑的实现而不是对象之间的依赖关系。
+
+
+
+## @Autowired和@Resouce区别
+
+都是Spring中实现Bean注入的注解
+
+- @Autowired 根据==类型==匹配
+
+```java
+@Service
+public class UserService{
+  // 默认true,强制要求实现注入
+  // 不希望注入，false 
+  @Autowired(required = true)
+  private HelloService helloService;
+  
+  @Autowired
+  @Qualifier()
+}
+```
+
+- @Resouce 根据==bean的名字==注入
+
+```java
+@Service
+public class UserService{
+			// 根据bean的名字注入
+  		@Resource(name = "userService01")
+  		private UserService01 userService;
+  		
+  		// 根据类型注入
+  		@Resource(type = UserService02.class)
+      private UserService02 userService;
+  }
+}
+```
+
+
+
+## @Component和@Confuguration区别
+
+- @Component 用于标识`普通的 Spring 组件类`,该类需要被Spring管理和实例化。
+- @Configuration 用于标识`配置类`，即定义 Bean 的工厂类。该类可以包含一个或多个@Bean方法，这些方法将返回一个被Spring管理的对象实例
+
+
+
+## @Component和@Bean区别
+
+- `@Component`注解作用于类，`@Bean`作用于方法
+
+- @Component通常通过类路径扫描来自动侦测以及自动装配到Spring容器中(`@ComponentScan`注解定义要扫描的路径从中找出标了需要装配的类自动装配到Spring的bean容器中)。@Bean注解通常是我们在标有该注解的方法中定义产生这个bean，`@Bean`告诉了Spring这是某个类的实例。
+
+- `@Bean`注解比`@Component`注解的自定义性更强
+
+  
+
+## 拦截器和过滤器的区别
+
+|          | 过滤器filter                                                 | 拦截器interceptor                          |
+| :------: | :----------------------------------------------------------- | :----------------------------------------- |
+| 生命周期 | 在Servlet容器中执行                                          | 在Spring容器中执行                         |
+| 作用对象 | 针对请求URL或者请求的servlet进行拦截处理，解析post、resutful风格的表单数据等 | 针对方法进行拦截处理，权限校验、登录校验等 |
+| 作用范围 | 可以拦截静态资源(图片、css文件)                              | 拦截请求到Controller层的请求               |
+| 拦截时机 | 请求进入Servlet容器之前和Servlet容器之后                     | 请求进入Spring MVC控制器之前和进入视图之前 |
+|          |                                                              |                                            |
+
+
+
+
+
+
+
 ## 自动装配机制
 
 @SpringApplication注解中带有@AutowiredConfiguration，这个注解中引入了AutoConfiguration类，其中定义了SpringFactoryl.loadFactoryNames方法，通过这个方法会扫描META-INFO下的spring.factories，spring根据定义去配置与扩展，比如Spring-data-redis等依赖。而像fastjson这种独立的JSON处理库就没有spring.factories，因为它不需要spring框架的自动配置机制。
